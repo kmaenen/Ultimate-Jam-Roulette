@@ -49,7 +49,7 @@ if not is_admin:
                         st.error(f"Fout: {e}")
 else:
     st.markdown(
-        "<style>header[data-testid='stHeader'] {visibility: hidden;} .stApp, .block-container {background-color: #000000 !important; color: #ffffff !important;} [data-testid='stSidebar'] {background-color: #111111 !important;} div.stButton > button:first-child {font-size: 2.5rem !important; padding: 20px !important; width: 100% !important; border-radius: 20px !important; font-weight: 900 !important; background: linear-gradient(135deg, #ff4b4b 0%, #ff6b6b 100%) !important; color: white !important; border: 4px solid #ffffff !important; text-transform: uppercase;}</style>",
+        "<style>header[data-testid='stHeader'] {visibility: hidden;} .stApp, .block-container {background-color: #000000 !important; color: #ffffff !important;} [data-testid='stSidebar'] {background-color: #111111 !important;} div.stButton > button:first-child {font-size: 2.5rem !important; padding: 22px !important; border-radius: 20px !important; font-weight: 900 !important; background: linear-gradient(135deg, #ff4b4b 0%, #ff6b6b 100%) !important; color: white !important; border: 4px solid #ffffff !important; text-transform: uppercase;}</style>",
         unsafe_allow_html=True
     )
     
@@ -87,8 +87,12 @@ else:
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 
-                # GROTE JAM KNOP BOVENAAN
-                if st.button("🔥  JAM!  🔥", type="primary"):
+                # CENTRAAL GEPLAATSTE GROTE JAM KNOP
+                col1, col2, col3 = st.columns([1, 3, 1])
+                with col2:
+                    jam_geklikt = st.button("🔥  JAM!  🔥", type="primary", use_container_width=True)
+                
+                if jam_geklikt:
                     nog_te_spelen = [n for n in uniek if n not in st.session_state['geschiedenis']]
                     
                     volledig_geldig = []
