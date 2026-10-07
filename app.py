@@ -113,4 +113,185 @@ else:
         background: linear-gradient(135deg, #ff2a2a 0%, #ff4b4b 100%) !important;
         border-color: #ffeb3b !important;
         box-shadow: 0px 20px 45px rgba(255, 75, 75, 0.9) !important;
-        transform: scale(
+        transform: scale(1.02);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.sidebar.success("Ingelogd als organisator! ✅")
+    
+    st.markdown("<h1 style='text-align: center; font-size: 2.8rem; font-weight: 800; margin-bottom: 0px; color: #ffffff;'>🎸 ULTIMATE JAM ROULETTE 🎸</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #aaaaaa; font-size: 1.1rem; margin-bottom: 15px;'>De live band machine</p>", unsafe_allow_html=True)
+    
+    try:
+        df_inschrijvingen = pd.read_csv(INSCHRIJVINGEN_CSV_URL)
+        
+        if df_inschrijvingen.empty or 'html' in str(df_inschrijvingen.columns[0]).lower():
+            st.warning("⚠️ Kon de Google Sheet niet goed laden. Klik hieronder op de knop om te verversen.")
+            if st.button("🔄 Data verversen"):
+                st.rerun()
+            st.stop()
+        
+        if len(df_inschrijvingen) > 0 and len(df_inschrijvingen.columns) >= 3:
+            uitgeklapt = []
+            for _, row in df_inschrijvingen.iterrows():
+                val_naam = row.iloc[0]
+                val_inst = row.iloc[1]
+                val_nums = row.iloc[2]
+                
+                if pd.isna(val_naam) or pd.isna(val_inst) or pd.isna(val_nums):
+                    continue
+                    
+                naam = str(val_naam).strip()
+                instrument = str(val_inst).strip()
+                nummers_str = str(val_nums)
+                
+                nummers_lijst = [n.strip() for n in nummers_str.split(',') if n.strip() and n.strip() != 'nan']
+                
+                for num in nummers_lijst:
+                    uitgeklapt.append({
+                        'Nummer': num,
+                        'Naam': naam,
+                        'Instrument': instrument
+                    })
+            
+            df_raw_bands = pd.DataFrame(uitgeklapt)
+            
+            if not df_raw_bands.empty:
+                unieke_nummers = df_raw_bands['Nummer'].unique().tolist()
+                
+                if 'loting_teller' not in st.session_state:
+                    st.session_state['loting_teller'] = 0
+                if 'vorige_bezetting_dict' not in st.session_state:
+                    st.session_state['vorige_bezetting_dict'] = {}
+                if 'geschiedenis_nummers' not in st.session_state:
+                    st.session_state['geschiedenis_nummers'] = []
+                
+                # --- RESULTATENWEERGAVE ---
+                resultaat_container = st.container()
+                
+                with resultaat_container:
+                    if st.session_state.get('geen_geldige_band', False):
+                        st.warning("⚠️ Geen enkel overgebleven nummer heeft momenteel de minimale bezetting (of alle nummers zijn al gespeeld!).")
+                    elif 'huidig_nummer' in st.session_state:
+                        st.markdown(f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.8rem; margin-bottom: 5px;'>🎵 {st.session_state['huidig_nummer']} 🎵</h1>", unsafe_allow_html=True)
+                        st.markdown("<h3 style='text-align: center; color: #ffffff; margin-top: 0px; margin-bottom: 10px;'>🎸 De Band op het Podium:</h3>", unsafe_allow_html=True)
+                        
+                        for _, row in st.session_state['huidige_band'].iterrows():
+                            st.markdown(f"<div style='text-align: center; font-size: 1.4rem; padding: 12px; background-color: #121212; border-radius: 12px; margin: 8px 0; border: 2px solid #333333; color: #ffffff;'><b>{row['Naam']}</b> — <i style='color: #ff6b6b;'>{row['Instrument']}</i></div>", unsafe_allow_html=True)
+                        st.markdown("<hr style='margin: 15px 0; border-color: #333333;'>", unsafe_allow_html=True)
+                
+                # --- DE ABSURD GROTE JAM KNOP ---
+                st.markdown("<br>", unsafe_allow_html=True)
+                jam_knop = st.button("🔥  JAM!  🔥", type="primary", use_container_width=True)
+                
+                # Snelle knop om de geschiedenis te resetten direct onder de jam-knop
+                if st.session_state['geschiedenis_nummers']:
+                    aantal_reeds_gehad = len(st.session_state['geschiedenis_nummers'])
+                    if st.button(f"↩️ Reset geschiedenis ({aantal_reeds_gehad} nummers gespeeld - klik om opnieuw te beginnen)"):
+                        st.session_state['geschiedenis_nummers'] = []
+                        st.success("Geschiedenis gereset! Alle nummers kunnen weer geloot worden.")
+                        st.rerun()
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                if jam_knop:
+                    st.session_state['loting_teller'] += 1
+                    is_flexibel_moment = (st.session_state['loting_teller'] % 4 == 0)
+                    
+                    volledig_bezet_nummers = []
+                    geldige_nummers = []
+                    
+                    # FILTER: Neem enkel nummers mee die nog NIET zijn gespeeld
+                    nog_te_spelen_nummers = [n for n in unieke_nummers if n not in st.session_state['geschiedenis_nummers']]
+                    
+                    for num in nog_te_spelen_nummers:
+                        kandidaten_check = df_raw_bands[df_raw_bands['Nummer'] == num]
+                        
+                        heeft_zang = any(kandidaten_check['Instrument'].str.lower().str.contains("zang|vocal|zanger", na=False))
+                        heeft_gitaar_keys = any(kandidaten_check['Instrument'].str.lower().str.contains("gitaar|guitar|toetsen|keys|keyboard|piano", na=False))
+                        heeft_drum = any(kandidaten_check['Instrument'].str.lower().str.contains("drum", na=False))
+                        heeft_bas = any(kandidaten_check['Instrument'].str.lower().str.contains("bas|bass", na=False))
+                        
+                        if heeft_zang and heeft_gitaar_keys:
+                            geldige_nummers.append(num)
+                            if heeft_drum and heeft_bas:
+                                volledig_bezet_nummers.append(num)
+                    
+                    gekozen_nummer = None
+                    if volledig_bezet_nummers and (not is_flexibel_moment or not geldige_nummers):
+                        gekozen_nummer = random.choice(volledig_bezet_nummers)
+                    elif geldige_nummers:
+                        gekozen_nummer = random.choice(geldige_nummers)
+                    
+                    if gekozen_nummer:
+                        # Voeg toe aan geschiedenis zodat het niet meer gekozen kan worden
+                        st.session_state['geschiedenis_nummers'].append(gekozen_nummer)
+                        
+                        kandidaten = df_raw_bands[df_raw_bands['Nummer'] == gekozen_nummer].copy()
+                        kandidaten['Inst_Lower'] = kandidaten['Instrument'].str.lower()
+                        
+                        vorige_dict = st.session_state['vorige_bezetting_dict']
+                        
+                        def filter_optimaal(subset_df, instrument_zoekwoord, reeds_gekozen_namen):
+                            beschikbaar = []
+                            noodoplossing = []
+                            
+                            for _, row in subset_df.iterrows():
+                                naam = row['Naam']
+                                if naam in reeds_gekozen_namen:
+                                    continue
+                                
+                                noodoplossing.append(row)
+                                if vorige_dict.get(naam) == instrument_zoekwoord:
+                                    continue
+                                
+                                beschikbaar.append(row)
+                            
+                            if beschikbaar:
+                                return pd.DataFrame(beschikbaar)
+                            elif noodoplossing:
+                                return pd.DataFrame(noodoplossing)
+                            else:
+                                return pd.DataFrame()
+
+                        toegevoegde_rollen = []
+                        reeds_gekozen_namen = []
+                        
+                        # STAP 1: Kies een Zanger
+                        zang_mensen = kandidaten[kandidaten['Inst_Lower'].str.contains("zang|vocal|zanger", na=False)]
+                        zang_filter = filter_optimaal(zang_mensen, "Zang", reeds_gekozen_namen)
+                        
+                        gekozen_zanger_naam = None
+                        if not zang_filter.empty:
+                            z = zang_filter.sample(1).iloc[0]
+                            gekozen_zanger_naam = z['Naam']
+                            toegevoegde_rollen.append({'Naam': gekozen_zanger_naam, 'Instrument': z['Instrument']})
+                            reeds_gekozen_namen.append(gekozen_zanger_naam)
+                        
+                        # STAP 2: Kies Gitaar/Toetsen
+                        extra_instrument_van_zanger = None
+                        if gekozen_zanger_naam:
+                            check_dubbel = kandidaten[
+                                (kandidaten['Naam'] == gekozen_zanger_naam) & 
+                                (kandidaten['Inst_Lower'].str.contains("gitaar|guitar|toetsen|keys|keyboard|piano", na=False))
+                            ]
+                            if not check_dubbel.empty:
+                                kand_inst = check_dubbel.iloc[0]['Instrument']
+                                if vorige_dict.get(gekozen_zanger_naam) != kand_inst:
+                                    extra_instrument_van_zanger = kand_inst
+                        
+                        if extra_instrument_van_zanger:
+                            toegevoegde_rollen[0]['Instrument'] = f"{toegevoegde_rollen[0]['Instrument']}, {extra_instrument_van_zanger}"
+                        else:
+                            gitaar_mensen = kandidaten[kandidaten['Inst_Lower'].str.contains("gitaar|guitar", na=False)]
+                            keys_mensen = kandidaten[kandidaten['Inst_Lower'].str.contains("toetsen|keys|keyboard|piano", na=False)]
+                            
+                            gitaar_filter = filter_optimaal(gitaar_mensen, "Gitaar", reeds_gekozen_namen)
+                            keys_filter = filter_optimaal(keys_mensen, "Toetsen", reeds_gekozen_namen)
+                            
+                            beschikbare_mk = pd.concat([gitaar_filter, keys_filter])
+                            if not beschikbare_mk.empty:
+                                mk = beschikbare_mk.sample(1).iloc[0]
+                                toegevoegde_rollen.append({'Naam': mk['Naam'], 'Instrument': mk['Instrument']})
+                                reeds_gekozen_namen.append(mk['Naam'])
