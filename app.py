@@ -97,7 +97,7 @@ else:
                     for num in nog_te_spelen:
                         k = df_bands[df_bands['Nummer'] == num]
                         hz = any(k['Instrument'].str.lower().str.contains("zang|vocal|zanger", na=False))
-                        hg = any(k['Instrument'].str.lower().str.contains("gitaar|guitar|toetsen|keys|keyboard|piano", na=False))
+                        hg = any(k['Instrument'].str.lower().str.contains("gitaar|guitar", na=False)) or any(k['Instrument'].str.lower().str.contains("toetsen|keys|keyboard|piano", na=False))
                         hd = any(k['Instrument'].str.lower().str.contains("drum", na=False))
                         hb = any(k['Instrument'].str.lower().str.contains("bas|bass", na=False))
                         
@@ -129,31 +129,61 @@ else:
                         band = []
                         gekozen_namen = []
                         
+                        # 1. Zang (max 1)
                         sub_zang = kand[kand['Instrument'].str.lower().str.contains("zang|vocal|zanger", na=False)]
                         if not sub_zang.empty:
                             r = sub_zang.sample(1).iloc[0]
                             band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
                             gekozen_namen.append(r['Naam'])
                             
-                        sub_mel = kand[kand['Instrument'].str.lower().str.contains("gitaar|guitar|toetsen|keys|keyboard|piano", na=False)]
-                        sub_mel = sub_mel[~sub_mel['Naam'].isin(gekozen_namen)]
-                        if not sub_mel.empty:
-                            r = sub_mel.sample(1).iloc[0]
+                        # 2. Gitaren (max 2)
+                        sub_gitaar = kand[kand['Instrument'].str.lower().str.contains("gitaar|guitar", na=False)]
+                        sub_gitaar = sub_gitaar[~sub_gitaar['Naam'].isin(gekozen_namen)]
+                        aantal_gitaren_te_pakken = min(2, len(sub_gitaar))
+                        if aantal_gitaren_te_pakken > 0:
+                            gitaren_lijst = sub_gitaar.sample(aantal_gitaren_te_pakken)
+                            for _, r in gitaren_lijst.iterrows():
+                                band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
+                                gekozen_namen.append(r['Naam'])
+
+                        # 3. Toetsen (max 1)
+                        sub_toetsen = kand[kand['Instrument'].str.lower().str.contains("toetsen|keys|keyboard|piano", na=False)]
+                        sub_toetsen = sub_toetsen[~sub_toetsen['Naam'].isin(gekozen_namen)]
+                        if not sub_toetsen.empty:
+                            r = sub_toetsen.sample(1).iloc[0]
                             band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
                             gekozen_namen.append(r['Naam'])
                         
+                        # 4. Bas (max 1, indien aanwezig)
+                        sub_bas = kand[kand['Instrument'].str.lower().str.contains("bas|bass", na=False)]
+                        sub_bas = sub_bas[~sub_bas['Naam'].isin(gekozen_namen)]
+                        if not sub_bas.empty:
+                            r = sub_bas.sample(1).iloc[0]
+                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
+                            gekozen_namen.append(r['Naam'])
+
+                        # 5. Saxofoon (max 1, indien aanwezig)
+                        sub_sax = kand[kand['Instrument'].str.lower().str.contains("saxofoon|sax", na=False)]
+                        sub_sax = sub_sax[~sub_sax['Naam'].isin(gekozen_namen)]
+                        if not sub_sax.empty:
+                            r = sub_sax.sample(1).iloc[0]
+                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
+                            gekozen_namen.append(r['Naam'])
+
+                        # 6. Anders (max 1, indien aanwezig)
+                        sub_anders = kand[kand['Instrument'].str.lower().str.contains("anders", na=False)]
+                        sub_anders = sub_anders[~sub_anders['Naam'].isin(gekozen_namen)]
+                        if not sub_anders.empty:
+                            r = sub_anders.sample(1).iloc[0]
+                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
+                            gekozen_namen.append(r['Naam'])
+                        
+                        # 7. Drums (max 1, alleen bij volledige beurt)
                         if not is_partieel:
                             sub_drum = kand[kand['Instrument'].str.lower().str.contains("drum", na=False)]
                             sub_drum = sub_drum[~sub_drum['Naam'].isin(gekozen_namen)]
                             if not sub_drum.empty:
                                 r = sub_drum.sample(1).iloc[0]
-                                band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
-                                gekozen_namen.append(r['Naam'])
-                                
-                            sub_bas = kand[kand['Instrument'].str.lower().str.contains("bas|bass", na=False)]
-                            sub_bas = sub_bas[~sub_bas['Naam'].isin(gekozen_namen)]
-                            if not sub_bas.empty:
-                                r = sub_bas.sample(1).iloc[0]
                                 band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
                                 gekozen_namen.append(r['Naam'])
                                 
@@ -167,12 +197,12 @@ else:
                 
                 # UITGEBREID OVERZICHT ONDER DE KNOP
                 with st.expander("📋 Uitgebreid overzicht van alle nummers & status"):
-                    st.write("Hier zie je welke nummers klaar zijn voor een volledige band, welke gedeeltelijk zijn, of waar de essentiële bezetting ontbreekt.")
+                    st.write("Hier zie je welke nummers klaar zijn voor een volledige band, welke gedeeltelijk zijn, of welke essentiële bezetting ontbreekt.")
                     overzicht = []
                     for num in uniek:
                         k = df_bands[df_bands['Nummer'] == num]
                         hz = any(k['Instrument'].str.lower().str.contains("zang|vocal|zanger", na=False))
-                        hg = any(k['Instrument'].str.lower().str.contains("gitaar|guitar|toetsen|keys|keyboard|piano", na=False))
+                        hg = any(k['Instrument'].str.lower().str.contains("gitaar|guitar", na=False)) or any(k['Instrument'].str.lower().str.contains("toetsen|keys|keyboard|piano", na=False))
                         hd = any(k['Instrument'].str.lower().str.contains("drum", na=False))
                         hb = any(k['Instrument'].str.lower().str.contains("bas|bass", na=False))
                         
@@ -190,7 +220,7 @@ else:
                             "Inschrijvingen": len(k), 
                             "Status": status,
                             "Zang": "✅" if hz else "❌",
-                            "Melodisch": "✅" if hg else "❌",
+                            "Melodisch/Gitaar": "✅" if hg else "❌",
                             "Drums": "✅" if hd else "❌",
                             "Bas": "✅" if hb else "❌"
                         })
