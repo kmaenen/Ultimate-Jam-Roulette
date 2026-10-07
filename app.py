@@ -76,6 +76,7 @@ else:
                 if 'geschiedenis' not in st.session_state: st.session_state['geschiedenis'] = []
                 if 'huidig_nummer' not in st.session_state: st.session_state['huidig_nummer'] = None
                 if 'huidige_band' not in st.session_state: st.session_state['huidige_band'] = None
+                if 'vorige_muzikanten' not in st.session_state: st.session_state['vorige_muzikanten'] = []
                 
                 # Toon huidige band indien geloot
                 if st.session_state['huidig_nummer']:
@@ -133,66 +134,89 @@ else:
                         band = []
                         gekozen_namen = []
                         
+                        # Helperfunctie om de beste kandidaat te kiezen (vermijd liefst de vorige muzikanten)
+                        def kies_muzikant(sub_df):
+                            if sub_df.empty:
+                                return None
+                            # Filter wie er nog niet in de vorige band stond
+                            vrij = sub_df[~sub_df['Naam'].isin(st.session_state['vorige_muzikanten'])]
+                            if not vrij.empty:
+                                return vrij.sample(1).iloc[0]
+                            else:
+                                # Als iedereen meedeed, dan toch iemand van de vorige beurt toelaten
+                                return sub_df.sample(1).iloc[0]
+
                         # 1. Zang (max 1)
                         sub_zang = kand[kand['Instrument'].str.lower().str.contains("zang|vocal|zanger", na=False)]
-                        if not sub_zang.empty:
-                            r = sub_zang.sample(1).iloc[0]
-                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
-                            gekozen_namen.append(r['Naam'])
+                        sub_zang = sub_zang[~sub_zang['Naam'].isin(gekozen_namen)]
+                        r_zang = kies_muzikant(sub_zang)
+                        if r_zang is not None:
+                            band.append({'Naam': r_zang['Naam'], 'Instrument': r_zang['Instrument']})
+                            gekozen_namen.append(r_zang['Naam'])
                             
                         # 2. Gitaren (max 2)
                         sub_gitaar = kand[kand['Instrument'].str.lower().str.contains("gitaar|guitar", na=False)]
                         sub_gitaar = sub_gitaar[~sub_gitaar['Naam'].isin(gekozen_namen)]
-                        aantal_gitaren_te_pakken = min(2, len(sub_gitaar))
-                        if aantal_gitaren_te_pakken > 0:
-                            gitaren_lijst = sub_gitaar.sample(aantal_gitaren_te_pakken)
-                            for _, r in gitaren_lijst.iterrows():
-                                band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
-                                gekozen_namen.append(r['Naam'])
+                        
+                        # Voorkeur voor mensen die niet de vorige keer speelden
+                        vrij_gitaren = sub_gitaar[~sub_gitaar['Naam'].isin(st.session_state['vorige_muzikanten'])]
+                        aantal_nodig = min(2, len(sub_gitaar))
+                        
+                        gitaren_lijst = pd.DataFrame()
+                        if len(vrij_gitaren) >= aantal_nodig:
+                            gitaren_lijst = vrij_gitaren.sample(aantal_nodig)
+                        else:
+                            gitaren_lijst = sub_gitaar.sample(aantal_nodig)
+                            
+                        for _, r in gitaren_lijst.iterrows():
+                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
+                            gekozen_namen.append(r['Naam'])
 
                         # 3. Toetsen (max 1)
                         sub_toetsen = kand[kand['Instrument'].str.lower().str.contains("toetsen|keys|keyboard|piano", na=False)]
                         sub_toetsen = sub_toetsen[~sub_toetsen['Naam'].isin(gekozen_namen)]
-                        if not sub_toetsen.empty:
-                            r = sub_toetsen.sample(1).iloc[0]
-                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
-                            gekozen_namen.append(r['Naam'])
+                        r_toetsen = kies_muzikant(sub_toetsen)
+                        if r_toetsen is not None:
+                            band.append({'Naam': r_toetsen['Naam'], 'Instrument': r_toetsen['Instrument']})
+                            gekozen_namen.append(r_toetsen['Naam'])
                         
                         # 4. Bas (max 1, indien aanwezig)
                         sub_bas = kand[kand['Instrument'].str.lower().str.contains("bas|bass", na=False)]
                         sub_bas = sub_bas[~sub_bas['Naam'].isin(gekozen_namen)]
-                        if not sub_bas.empty:
-                            r = sub_bas.sample(1).iloc[0]
-                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
-                            gekozen_namen.append(r['Naam'])
+                        r_bas = kies_muzikant(sub_bas)
+                        if r_bas is not None:
+                            band.append({'Naam': r_bas['Naam'], 'Instrument': r_bas['Instrument']})
+                            gekozen_namen.append(r_bas['Naam'])
 
                         # 5. Saxofoon (max 1, indien aanwezig)
                         sub_sax = kand[kand['Instrument'].str.lower().str.contains("saxofoon|sax", na=False)]
                         sub_sax = sub_sax[~sub_sax['Naam'].isin(gekozen_namen)]
-                        if not sub_sax.empty:
-                            r = sub_sax.sample(1).iloc[0]
-                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
-                            gekozen_namen.append(r['Naam'])
+                        r_sax = kies_muzikant(sub_sax)
+                        if r_sax is not None:
+                            band.append({'Naam': r_sax['Naam'], 'Instrument': r_sax['Instrument']})
+                            gekozen_namen.append(r_sax['Naam'])
 
                         # 6. Anders (max 1, indien aanwezig)
                         sub_anders = kand[kand['Instrument'].str.lower().str.contains("anders", na=False)]
                         sub_anders = sub_anders[~sub_anders['Naam'].isin(gekozen_namen)]
-                        if not sub_anders.empty:
-                            r = sub_anders.sample(1).iloc[0]
-                            band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
-                            gekozen_namen.append(r['Naam'])
+                        r_anders = kies_muzikant(sub_anders)
+                        if r_anders is not None:
+                            band.append({'Naam': r_anders['Naam'], 'Instrument': r_anders['Instrument']})
+                            gekozen_namen.append(r_anders['Naam'])
                         
                         # 7. Drums (max 1, alleen bij volledige beurt)
                         if not is_partieel:
                             sub_drum = kand[kand['Instrument'].str.lower().str.contains("drum", na=False)]
                             sub_drum = sub_drum[~sub_drum['Naam'].isin(gekozen_namen)]
-                            if not sub_drum.empty:
-                                r = sub_drum.sample(1).iloc[0]
-                                band.append({'Naam': r['Naam'], 'Instrument': r['Instrument']})
-                                gekozen_namen.append(r['Naam'])
+                            r_drum = kies_muzikant(sub_drum)
+                            if r_drum is not None:
+                                band.append({'Naam': r_drum['Naam'], 'Instrument': r_drum['Instrument']})
+                                gekozen_namen.append(r_drum['Naam'])
                                 
                         st.session_state['huidig_nummer'] = gekozen
                         st.session_state['huidige_band'] = pd.DataFrame(band)
+                        # Sla de namen op als 'vorige muzikanten' voor de volgende ronde
+                        st.session_state['vorige_muzikanten'] = gekozen_namen
                         st.rerun()
                     else:
                         st.warning("Geen geschikte nummers beschikbaar om te loten!")
@@ -233,6 +257,7 @@ else:
                 if st.session_state['geschiedenis']:
                     if st.button("↩️ Reset geschiedenis"):
                         st.session_state['geschiedenis'] = []
+                        st.session_state['vorige_muzikanten'] = []
                         st.rerun()
     except Exception as e:
         st.error(f"Fout in admin paneel: {e}")
