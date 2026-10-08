@@ -8,10 +8,29 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzXpg0gOGRWxnMFcozojnw5F-
 NUMMERS_CSV_URL = "https://docs.google.com/spreadsheets/d/1o8uxw9hUk9YMZ0eIRPCZ3_Lglt3CqV-Zu3xlmpu-Xnw/export?format=csv&gid=1454715385"
 INSCHRIJVINGEN_CSV_URL = "https://docs.google.com/spreadsheets/d/1o8uxw9hUk9YMZ0eIRPCZ3_Lglt3CqV-Zu3xlmpu-Xnw/export?format=csv&gid=0"
 
-st.set_page_config(page_title="Ultimate Jam Roulette", page_icon="🎸", layout="centered")
+st.set_page_config(page_title="Ultimate Jam Roulette", page_icon="🎸", layout="wide")
 
-wachtwoord = st.sidebar.text_input("Wachtwoord voor beheer:", type="password")
-is_admin = (wachtwoord == "jam2026")
+st.markdown(
+    """
+    <style>
+    header[data-testid='stHeader'] {visibility: hidden;}
+    .stApp {background-color: #000000 !important; color: #ffffff !important;}
+    /* Pagina marges compacter gemaakt zodat het op een 13" scherm perfect past */
+    .block-container { background-color: #000000 !important; color: #ffffff !important; max-width: 1200px !important; padding-top: 1rem !important; padding-bottom: 1rem !important; margin: auto !important; }
+    
+    div.stButton > button:first-child {font-size: 2.2rem !important; padding: 18px !important; border-radius: 16px !important; font-weight: 900 !important; background: linear-gradient(135deg, #ff4b4b 0%, #ff6b6b 100%) !important; color: white !important; border: 4px solid #ffffff !important; text-transform: uppercase;}
+    div[data-testid="stButton"] button[kind="secondary"] {font-size: 0.9rem !important; padding: 4px 10px !important; background: transparent !important; border: 1px solid #444444 !important; color: #888888 !important; border-radius: 4px !important; text-transform: none !important;}
+    
+    .reroll-container { display: flex; align-items: center; justify-content: center; position: relative; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+if 'is_admin' not in st.session_state:
+    st.session_state['is_admin'] = False
+
+is_admin = st.session_state['is_admin']
 
 if not is_admin:
     st.markdown("<h1 style='text-align: center;'>🎸 ULTIMATE JAM ROULETTE! 🎸</h1>", unsafe_allow_html=True)
@@ -48,21 +67,18 @@ if not is_admin:
                             st.error("Fout bij opslaan.")
                     except Exception as e:
                         st.error(f"Fout: {e}")
-else:
-    st.markdown(
-        """
-        <style>
-        header[data-testid='stHeader'] {visibility: hidden;}
-        .stApp, .block-container {background-color: #000000 !important; color: #ffffff !important;}
-        [data-testid='stSidebar'] {background-color: #111111 !important;}
-        div.stButton > button:first-child {font-size: 2.5rem !important; padding: 22px !important; border-radius: 20px !important; font-weight: 900 !important; background: linear-gradient(135deg, #ff4b4b 0%, #ff6b6b 100%) !important; color: white !important; border: 4px solid #ffffff !important; text-transform: uppercase;}
-        .reroll-container { display: flex; align-items: center; justify-content: center; position: relative; }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+                        
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
     
-    st.markdown("<h1 style='text-align: center; font-size: 2.8rem; font-weight: 800; margin-bottom: 0px;'>🎸 ULTIMATE JAM ROULETTE 🎸</h1>", unsafe_allow_html=True)
+    with st.expander("⚙️ Beheerderslogin (voor organisatie)", expanded=False):
+        ingevoerd_wachtwoord = st.text_input("Wachtwoord:", type="password", key="admin_pwd_input")
+        if ingevoerd_wachtwoord == "jam2026":
+            st.session_state['is_admin'] = True
+            st.rerun()
+
+else:
+    # Hoofdtitel iets compacter gemaakt (2.2rem i.p.v. 2.8rem) zodat het direct ruimte bespaart
+    st.markdown("<h1 style='text-align: center; font-size: 2.2rem; font-weight: 800; margin-bottom: 0px;'>🎸 ULTIMATE JAM ROULETTE 🎸</h1>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
     
     try:
@@ -94,43 +110,44 @@ else:
                 podium_slot = st.empty()
                 
                 def bouw_podium_html(nummer, band_lijst, rol_bezig=None, slot_naam=""):
-                    html = f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.8rem; margin-bottom: 5px;'>🎵 {nummer} 🎵</h1>"
-                    html += "<h3 style='text-align: center; color: #ffffff; margin-top: 0px;'>🎸 De Band op het Podium:</h3>"
+                    # Compactere marges en padding in de HTML-structuur voor de bandleden
+                    html = "<h1 style='text-align: center; color: #ff4b4b; font-size: 1.5rem; margin-bottom: 0px;'>🎵 WINNEND NUMMER! 🎵</h1>"
+                    html += f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.2rem; margin-top: 0px; margin-bottom: 2px;'>{nummer}</h1>"
+                    html += "<h3 style='text-align: center; color: #ffffff; margin-top: 0px; margin-bottom: 5px; font-size: 1.1rem;'>🎸 De Band op het Podium:</h3>"
                     
                     for item in band_lijst:
                         r, n, ins = item[0], item[1], item[2]
-                        # De rol tussen haakjes wordt hier weggelaten uit de weergave
-                        html += f"<div style='text-align: center; font-size: 1.4rem; padding: 12px; background-color: #121212; border-radius: 12px; margin: 8px 0; border: 2px solid #333333;'><b>{n}</b> — <i style='color: #ff6b6b;'>{ins}</i></div>"
+                        html += f"<div style='text-align: center; font-size: 1.2rem; padding: 7px; background-color: #121212; border-radius: 10px; margin: 4px 0; border: 2px solid #333333;'><b>{n}</b> — <i style='color: #ff6b6b;'>{ins}</i></div>"
                     
                     if rol_bezig:
-                        # Tijdens de animatie tonen we ook alleen de instrumentnaam of rol in het groot
                         scherm_rol = "Gitaar" if "gitaar" in rol_bezig.lower() else rol_bezig
-                        html += f"<div style='text-align: center; font-size: 1.4rem; padding: 12px; background-color: #1a1a1a; border-radius: 12px; margin: 8px 0; border: 2px dashed #ff4b4b;'><b style='color: #ff4b4b;'>{scherm_rol.upper()} DECODING...</b> <br><span style='font-size: 1.8rem; font-family: monospace; letter-spacing: 2px; color: #00ffcc;'>{slot_naam}</span></div>"
+                        html += f"<div style='text-align: center; font-size: 1.2rem; padding: 7px; background-color: #1a1a1a; border-radius: 10px; margin: 4px 0; border: 2px dashed #ff4b4b;'><b style='color: #ff4b4b;'>{scherm_rol.upper()} DECODING...</b> <br><span style='font-size: 1.5rem; font-family: monospace; letter-spacing: 2px; color: #00ffcc;'>{slot_naam}</span></div>"
                     
-                    html += "<hr style='margin: 15px 0; border-color: #333333;'>"
+                    html += "<hr style='margin: 10px 0; border-color: #333333;'>"
                     return html
 
                 # --- RENDER LOGICA IN DE PODIUM CONTAINER ---
                 if st.session_state['fase'] == 'wacht_op_onthulling':
                     podium_slot.markdown(
-                        f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.8rem; margin-bottom: 5px;'>🎵 {st.session_state['huidig_nummer']} 🎵</h1>"
-                        f"<h3 style='text-align: center; color: #ffffff; margin-top: 0px;'>🎸 Klaar voor de band... Klik op 'Onthul Band'!</h3>"
-                        f"<hr style='margin: 15px 0; border-color: #333333;'>",
+                        "<h1 style='text-align: center; color: #ff4b4b; font-size: 1.5rem; margin-bottom: 0px;'>🎵 WINNEND NUMMER! 🎵</h1>"
+                        f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.2rem; margin-top: 0px; margin-bottom: 2px;'>{st.session_state['huidig_nummer']}</h1>"
+                        f"<hr style='margin: 10px 0; border-color: #333333;'>",
                         unsafe_allow_html=True
                     )
                 elif st.session_state['fase'] == 'klaar' and st.session_state['huidig_nummer'] and st.session_state['huidige_band'] is not None:
                     with podium_slot.container():
-                        st.markdown(f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.8rem; margin-bottom: 5px;'>🎵 {st.session_state['huidig_nummer']} 🎵</h1>", unsafe_allow_html=True)
-                        st.markdown("<h3 style='text-align: center; color: #ffffff; margin-top: 0px;'>🎸 De Band op het Podium:</h3>", unsafe_allow_html=True)
+                        st.markdown("<h1 style='text-align: center; color: #ff4b4b; font-size: 1.5rem; margin-bottom: 0px;'>🎵 WINNEND NUMMER! 🎵</h1>", unsafe_allow_html=True)
+                        st.markdown(f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.2rem; margin-top: 0px; margin-bottom: 2px;'>{st.session_state['huidig_nummer']}</h1>", unsafe_allow_html=True)
+                        st.markdown("<h3 style='text-align: center; color: #ffffff; margin-top: 0px; margin-bottom: 5px; font-size: 1.1rem;'>🎸 De Band op het Podium:</h3>", unsafe_allow_html=True)
                         
                         band_df = st.session_state['huidige_band']
                         for idx, row in band_df.iterrows():
                             cols = st.columns([11, 1])
                             with cols[0]:
-                                # Ook hier is de rol tussen haakjes weggelaten
-                                st.markdown(f"<div style='text-align: center; font-size: 1.4rem; padding: 12px; background-color: #121212; border-radius: 12px; margin: 8px 0; border: 2px solid #333333;'><b>{row['Naam']}</b> — <i style='color: #ff6b6b;'>{row['Instrument']}</i></div>", unsafe_allow_html=True)
+                                # Kaarten iets compacter gemaakt (padding 7px i.p.v. 12px)
+                                st.markdown(f"<div style='text-align: center; font-size: 1.2rem; padding: 7px; background-color: #121212; border-radius: 10px; margin: 4px 0; border: 2px solid #333333;'><b>{row['Naam']}</b> — <i style='color: #ff6b6b;'>{row['Instrument']}</i></div>", unsafe_allow_html=True)
                             with cols[1]:
-                                st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+                                st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
                                 if st.button("🔄", key=f"reroll_{idx}", help=f"Vervang {row['Instrument']}"):
                                     gekozen_nummer = st.session_state['huidig_nummer']
                                     doel_rol = row['Rol']
@@ -163,7 +180,7 @@ else:
                                         st.rerun()
                                     else:
                                         st.toast(f"Geen andere reservekandidaten voor dit instrument!", icon="⚠️")
-                        st.markdown("<hr style='margin: 15px 0; border-color: #333333;'>", unsafe_allow_html=True)
+                        st.markdown("<hr style='margin: 10px 0; border-color: #333333;'>", unsafe_allow_html=True)
                 else:
                     podium_slot.empty()
 
@@ -268,13 +285,17 @@ else:
                             
                             for idx, dummy_num in enumerate(animatie_nummers):
                                 is_laatste = (idx == len(animatie_nummers) - 1)
-                                kleur = "#ff4b4b" if is_laatste else "#ffffff"
-                                titel = "🎵 WINNEND NUMMER! 🎵" if is_laatste else "🎰 NUMMER ROULETTE... 🎰"
+                                
+                                if is_laatste:
+                                    titel_html = "<h1 style='text-align: center; color: #ff4b4b; font-size: 1.5rem; margin-bottom: 0px;'>🎵 WINNEND NUMMER! 🎵</h1>"
+                                    titel_html += f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.2rem; margin-top: 0px; margin-bottom: 2px;'>{dummy_num}</h1>"
+                                else:
+                                    titel_html = "<h1 style='text-align: center; color: #ff4b4b; font-size: 1.5rem; margin-bottom: 0px;'>🎰 NUMMER ROULETTE... 🎰</h1>"
+                                    titel_html += f"<h1 style='text-align: center; color: #ffffff; font-size: 2.2rem; margin-top: 0px; margin-bottom: 2px;'>{dummy_num}</h1>"
                                 
                                 podium_slot.markdown(
-                                    f"<h1 style='text-align: center; color: #ff4b4b; font-size: 2.8rem; margin-bottom: 5px;'>{titel}</h1>"
-                                    f"<h1 style='text-align: center; color: {kleur}; font-size: 2.5rem; margin: 10px 0;'>🎵 {dummy_num} 🎵</h1>"
-                                    f"<hr style='margin: 15px 0; border-color: #333333;'>",
+                                    f"{titel_html}"
+                                    f"<hr style='margin: 10px 0; border-color: #333333;'>",
                                     unsafe_allow_html=True
                                 )
                                 delay = 0.08 if idx < 18 else (0.15 if idx < 23 else 0.25)
@@ -425,7 +446,7 @@ else:
                     st.dataframe(pd.DataFrame(overzicht), use_container_width=True)
                 
                 if st.session_state['geschiedenis']:
-                    if st.button("↩️ Reset geschiedenis"):
+                    if st.button("Reset geschiedenis", type="secondary"):
                         st.session_state['geschiedenis'] = []
                         st.session_state['vorige_muzikanten'] = []
                         st.session_state['huidig_nummer'] = None
